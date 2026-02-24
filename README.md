@@ -46,3 +46,6 @@ Clique em Generate new token (selecione a opção Classic).
 Dê um nome (ex: "Meu PC"), escolha o tempo de expiração e marque a caixinha repo (isso dá permissão para fazer push).
 
 Clique em Generate token.
+
+
+🚀 
