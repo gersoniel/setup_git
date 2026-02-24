@@ -354,7 +354,65 @@ cmd_pull() {
     git_output=$(git -C "${WORKDIR}" pull origin "$(current_branch)" 2>&1)
     local exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
-        handle_git_error "$git_output"
+        if echo "$git_output" | grep -q "divergent branches"; then
+            echo ""
+            echo -e "${RED}╔══════════════════════════════════════════════════════╗${NC}"
+            echo -e "${RED}║           BRANCHES DIVERGENTES                       ║${NC}"
+            echo -e "${RED}╚══════════════════════════════════════════════════════╝${NC}"
+            echo ""
+            echo -e "${YELLOW}Seu repositório local e o remoto têm commits diferentes${NC}"
+            echo -e "${YELLOW}e o Git não sabe como combiná-los automaticamente.${NC}"
+            echo ""
+            echo -e "${BOLD}Escolha como deseja resolver:${NC}"
+            echo ""
+            echo -e "  ${CYAN}1)${NC} ${BOLD}Merge${NC} — une os históricos (cria um commit de merge)"
+            echo -e "  ${CYAN}2)${NC} ${BOLD}Rebase${NC} — reaplica seus commits sobre o remoto (histórico linear)"
+            echo -e "  ${CYAN}3)${NC} ${BOLD}Fast-forward only${NC} — só atualiza se não houver conflito"
+            echo -e "  ${CYAN}0)${NC} Cancelar"
+            echo ""
+            echo -en "${YELLOW}Escolha: ${NC}"
+            read -r resolve_opt
+            case $resolve_opt in
+                1)
+                    step "Fazendo pull com merge..."
+                    git_output2=$(git -C "${WORKDIR}" pull --no-rebase origin "$(current_branch)" 2>&1)
+                    if [[ $? -eq 0 ]]; then
+                        success "Pull com merge concluído!"
+                        git config --global pull.rebase false
+                        info "Preferência salva: pull.rebase false (merge)"
+                    else
+                        echo "$git_output2"
+                        handle_git_error "$git_output2"
+                    fi ;;
+                2)
+                    step "Fazendo pull com rebase..."
+                    git_output2=$(git -C "${WORKDIR}" pull --rebase origin "$(current_branch)" 2>&1)
+                    if [[ $? -eq 0 ]]; then
+                        success "Pull com rebase concluído!"
+                        git config --global pull.rebase true
+                        info "Preferência salva: pull.rebase true (rebase)"
+                    else
+                        echo "$git_output2"
+                        handle_git_error "$git_output2"
+                    fi ;;
+                3)
+                    step "Fazendo pull fast-forward only..."
+                    git_output2=$(git -C "${WORKDIR}" pull --ff-only origin "$(current_branch)" 2>&1)
+                    if [[ $? -eq 0 ]]; then
+                        success "Pull fast-forward concluído!"
+                        git config --global pull.ff only
+                        info "Preferência salva: pull.ff only"
+                    else
+                        echo ""
+                        error "Fast-forward não é possível (há commits locais não enviados)."
+                        echo ""
+                        echo -e "${YELLOW}Dica: use Merge ou Rebase para combinar os históricos.${NC}"
+                    fi ;;
+                *) info "Operação cancelada." ;;
+            esac
+        else
+            handle_git_error "$git_output"
+        fi
     else
         success "Atualização concluída."
     fi
