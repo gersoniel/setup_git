@@ -1,0 +1,22 @@
+# Sistemas operacionais
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Dependências
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+
+# Variáveis de ambiente
+.env
+.env.local
+
+# Build
+dist/
+build/
