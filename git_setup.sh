@@ -86,6 +86,80 @@ handle_git_error() {
         echo ""
         echo -e "${YELLOW}Use a opção ${BOLD}12${NC}${YELLOW} para atualizar a URL do remoto com o token.${NC}"
         echo ""
+    elif echo "$output" | grep -qiE "non-fast-forward|rejected.*main|failed to push some refs"; then
+        echo ""
+        echo -e "${RED}╔══════════════════════════════════════════════════════╗${NC}"
+        echo -e "${RED}║        PUSH REJEITADO — BRANCH DESATUALIZADA         ║${NC}"
+        echo -e "${RED}╚══════════════════════════════════════════════════════╝${NC}"
+        echo ""
+        echo -e "${YELLOW}O remoto tem commits que você ainda não tem localmente.${NC}"
+        echo -e "${YELLOW}Você precisa integrar essas mudanças antes de enviar.${NC}"
+        echo ""
+        echo -e "${BOLD}Como deseja resolver?${NC}"
+        echo ""
+        echo -e "  ${CYAN}1)${NC} ${BOLD}Pull + Push automático (merge)${NC}"
+        echo -e "     Baixa o remoto, une com o local e envia tudo"
+        echo ""
+        echo -e "  ${CYAN}2)${NC} ${BOLD}Pull + Push automático (rebase)${NC}"
+        echo -e "     Reaplica seus commits sobre o remoto (histórico mais limpo)"
+        echo ""
+        echo -e "  ${CYAN}3)${NC} ${BOLD}Forçar push${NC} ${RED}(PERIGOSO)${NC}"
+        echo -e "     Sobrescreve o remoto com sua versão local"
+        echo -e "     ${RED}⚠ Apaga commits do remoto permanentemente!${NC}"
+        echo ""
+        echo -e "  ${CYAN}0)${NC} Cancelar"
+        echo ""
+        echo -en "${YELLOW}Escolha: ${NC}"
+        read -r push_opt
+        local branch
+        branch=$(current_branch)
+        case $push_opt in
+            1)
+                step "Fazendo pull (merge) e push..."
+                local pull_out
+                pull_out=$(git -C "${WORKDIR}" pull --no-rebase origin "$branch" 2>&1)
+                if [[ $? -ne 0 ]]; then
+                    echo ""
+                    error "Pull falhou. Resolva os conflitos manualmente."
+                    echo "$pull_out"
+                else
+                    success "Pull concluído."
+                    local push_out
+                    push_out=$(git -C "${WORKDIR}" push origin "$branch" 2>&1)
+                    if [[ $? -eq 0 ]]; then
+                        success "Push realizado com sucesso!"
+                    else
+                        handle_git_error "$push_out"
+                    fi
+                fi ;;
+            2)
+                step "Fazendo pull (rebase) e push..."
+                local pull_out
+                pull_out=$(git -C "${WORKDIR}" pull --rebase origin "$branch" 2>&1)
+                if [[ $? -ne 0 ]]; then
+                    echo ""
+                    error "Rebase falhou. Resolva os conflitos e rode: git rebase --continue"
+                    echo "$pull_out"
+                else
+                    success "Rebase concluído."
+                    local push_out
+                    push_out=$(git -C "${WORKDIR}" push origin "$branch" 2>&1)
+                    if [[ $? -eq 0 ]]; then
+                        success "Push realizado com sucesso!"
+                    else
+                        handle_git_error "$push_out"
+                    fi
+                fi ;;
+            3)
+                echo ""
+                warn "Isso vai sobrescrever o repositório remoto com sua versão local."
+                if confirm "Tem certeza que deseja forçar o push?"; then
+                    git -C "${WORKDIR}" push --force origin "$branch"                         && success "Push forçado realizado."                         || error "Push forçado falhou."
+                else
+                    info "Operação cancelada."
+                fi ;;
+            *) info "Operação cancelada." ;;
+        esac
     else
         echo "$output"
     fi
