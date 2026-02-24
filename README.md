@@ -22,7 +22,7 @@ Um assistente em Bash para automatizar tarefas comuns do Git. Este script oferec
 
 2. Status: Mostra arquivos modificados.
 
-3. Commit: Atalho para add + commit.
+3. Commit: Atalho para add + commit.S
 
 4. Pull/5. Push: Sincronização.
 
